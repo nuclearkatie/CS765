@@ -10,6 +10,7 @@
 
 #######################################################################################################################
 library(shiny)
+library(shinyWidgets)
 library(arrow)
 library(tidyverse)
 
@@ -48,17 +49,18 @@ ui <- fluidPage(
     ),
 
     # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-    
+    tabsetPanel(type = "tabs",
+            tabPanel(tags$b("Products"),
+        
         # Show a plot of the generated distribution
         mainPanel(
            #plotOutput("distPlot"),
-            plotOutput("testplot2",
+            plotOutput("plot1",
                        click = "plot1_click",
                        brush = brushOpts(
                            id = "plot1_brush")
                        ),
-            plotOutput("testplot"),
+            plotOutput("plot2"),
             plotOutput("timeseries")
         ),
         sidebarPanel(
@@ -81,60 +83,139 @@ ui <- fluidPage(
                                   "R&B" = "CDs & Vinyl,R&B"
                                   ),
                         selected="CDs & Vinyl,Pop"),
-            h4("Points near click"),
+            sliderInput("sizeslider", "Number of reviews to show (randomly sampled):",
+                        min = 1, max = 30993,
+                        value = 15496),
+            sliderInput("pricerange", label="Select a price range",
+                        min=0, max=800.47,
+                        step=5, value=c(0,800.47),
+                        pre="$"),
+            radioButtons(
+                inputId = "clickorbrush",
+                label = "How to select data",
+                choices = c("Click", "Brush"),
+                selected = "Click"
+            ),
+            h4("Points near click/brush"),
             verbatimTextOutput("click_info"),
-            h4("Brushed points"),
-            verbatimTextOutput("brush_info"),
-            verbatimTextOutput("points_asin")
-            
+            #h4("Brushed points"),
+            #verbatimTextOutput("brush_info"),
+            h5("Title of selected data"),
+            htmlOutput("printtitle"),
+            h5("Price"),
+            htmlOutput("pricedescription"),
+            h5("Description"),
+            htmlOutput("printdescription")
         )
+    )
     )
 )
 
 #######################################################################################################################
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
 
 ########################################################### clicks
     
     output$click_info <- renderPrint({
         # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
         # were a base graphics plot, we'd need those.
-        nearPoints(average_review(), input$plot1_click, addDist = TRUE)
+        if (input$clickorbrush == "Click"){
+            nearPoints(average_review_price(), input$plot1_click, addDist = TRUE)$asin
+            }
+        else{
+            brushedPoints(average_review_price(), input$plot1_brush)$asin
+        }
     })
     
-    output$brush_info <- renderPrint({
-        brushedPoints(average_review(), input$plot1_brush)$asin
+    #output$brush_info <- renderPrint({
+    #    brushedPoints(average_review_sampled(), input$plot1_brush)$asin
+    #})
+    
+    output$printtitle <- renderText({
+        if (input$clickorbrush == "Click"){
+            top_reviewed_product()$title[1]
+        }
+        else{
+            top_reviewed_product()$title[1]
+        }
+    })
+    
+    output$printdescription <- renderText({
+        if (input$clickorbrush == "Click"){
+            top_reviewed_product()$description[1]
+        }
+        else{
+            top_reviewed_product()$description[1]
+        }
+    })
+    
+    output$pricedescription <- renderText({
+        if (input$clickorbrush == "Click"){
+            paste0("$", top_reviewed_product()$price[1])
+        }
+        else{
+            paste0("$", top_reviewed_product()$price[1])
+        }
     })
     
 ########################################################### reactive data
     
     data_category <- reactive({
         req(input$choosecategory)
-        leftJoinDf %>% filter(categoriesstring == input$choosecategory)
+        #filter(str_detect(rowname, "^L"))
+        leftJoinDf %>% filter(str_detect(categoriesstring, paste0("^", input$choosecategory)))
+        #leftJoinDf %>% filter(categoriesstring == input$choosecategory)
     })
     
+    
     top_reviewed_product <- reactive({
-        data_category() %>% filter(asin %in% nearPoints(average_review(), input$plot1_click, addDist = TRUE)$asin)
+        if (input$clickorbrush == "Click"){
+            data_category() %>% filter(asin %in% nearPoints(average_review(), input$plot1_click, addDist = TRUE)$asin)
+        }
+        else{
+            data_category() %>% filter(asin %in% brushedPoints(average_review_sampled(), input$plot1_brush)$asin)
+            
+        }
     })
     
     average_review <- reactive({
         data_category() %>% group_by(asin) %>% summarise(avr_rating = mean(overall), count=n(), price=mean(price))
     })
     
+    n_data <- reactive({nrow(average_review())})
+    
+    observe({
+        updateSliderInput(session, "sizeslider", max=n_data(), value=n_data()/2) 
+    })
+    
+    observe({
+        max_price <- max(average_review_sampled()$price, na.rm=TRUE)
+        updateSliderInput(session, "pricerange", max=max_price, value=c(0,max_price))
+    })
+    
+    average_review_sampled <- reactive({
+        sample_n(average_review(), size = input$sizeslider, replace=TRUE)
+    })
+    
+    average_review_price <- reactive({
+        average_review_sampled() %>% filter(price >= input$pricerange[1] & price <= input$pricerange[2])
+    })
+    
 ########################################################### plots
     
-    output$testplot <- renderPlot({
+    output$plot2 <- renderPlot({
         ggplot(data=top_reviewed_product(), aes(overall, fill=factor(overall))) + 
             geom_bar(position = position_stack(reverse = TRUE)) + coord_flip() +
             scale_fill_viridis(discrete=TRUE) + theme_bw() + 
             theme(panel.grid.minor.y=element_blank(),panel.grid.major.y=element_blank())
     })
     
-    output$testplot2 <- renderPlot({
+    output$plot1 <- renderPlot({
         #my_breaks = c(0.1, 10, 100, 400, 800)
-        ggplot(data=average_review(), aes(avr_rating, count)) + geom_point(aes(color=price)) +
+        req(n_data())
+        ggplot(data=average_review_price(), aes(avr_rating, count)) + geom_point(aes(color=price)) +
             scale_color_viridis()
     })
     
