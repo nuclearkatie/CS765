@@ -22,11 +22,6 @@ cds <- read.csv(file="CDs_and_Vinyl_5.csv", header=TRUE, sep=",")
 leftJoinDf <- left_join(cds,metadata,by="asin")
 leftJoinDf <- leftJoinDf %>% mutate(time = as.POSIXct(as.numeric(as.character(unixReviewTime)),origin="1970-01-01",tz="GMT"))
 
-top_reviewed_product <- cds %>% filter(asin == "B00008OWZG")
-
-# interesting asins
-# B002NACY22
-
 #######################################################################################################################
 # UI Definition
 ui <- fluidPage(
@@ -81,12 +76,20 @@ ui <- fluidPage(
                                   "Dance & Electronic" = "CDs & Vinyl,Dance & Electronic",
                                   "Soul" = "CDs & Vinyl,R&B,Soul",
                                   "Reggae" = "CDs & Vinyl,Reggae",
-                                  "R&B" = "CDs & Vinyl,R&B"
+                                  "R&B" = "CDs & Vinyl,R&B",
+                                  "New Age" = "CDs & Vinyl,New Age",
+                                  "Alternative Rock" = "CDs & Vinyl,Alternative Rock",
+                                  "Folk" = "CDs & Vinyl,Folk",
+                                  "Rap" = "CDs & Vinyl,Rap",
+                                  "Broadway & Vocalists" = "CDs & Vinyl,Broadway & Vocalists",
+                                  "Holidays & Weddings" = "CDs & Vinyl,Holiday & Wedding",
+                                  "Gospel" = "CDs & Vinyl,Gospel",
+                                  "Latin" = "CDs & Vinyl,Latin Music"
                                   ),
                         selected="CDs & Vinyl,Pop"),
             sliderInput("sizeslider", "Number of reviews to show (randomly sampled):",
                         min = 1, max = 30993,
-                        value = 15496),
+                        value = 30993),
             sliderInput("pricerange", label="Select a price range",
                         min=0, max=800.47,
                         step=5, value=c(0,800.47),
@@ -123,7 +126,6 @@ ui <- fluidPage(
                              label="Choose a category",
                              choices=c("Pop" = "CDs & Vinyl,Pop", 
                                        "Country" = 'CDs & Vinyl,Country', 
-                                       "Death Metal" = "CDs & Vinyl,Metal,Death Metal",
                                        "Metal" = "CDs & Vinyl,Metal",
                                        "Children's Music" = "CDs & Vinyl,Children's Music",
                                        "Classical" = "CDs & Vinyl,Classical",
@@ -135,12 +137,20 @@ ui <- fluidPage(
                                        "Dance & Electronic" = "CDs & Vinyl,Dance & Electronic",
                                        "Soul" = "CDs & Vinyl,R&B,Soul",
                                        "Reggae" = "CDs & Vinyl,Reggae",
-                                       "R&B" = "CDs & Vinyl,R&B"
+                                       "R&B" = "CDs & Vinyl,R&B",
+                                       "New Age" = "CDs & Vinyl,New Age",
+                                       "Alternative Rock" = "CDs & Vinyl,Alternative Rock",
+                                       "Folk" = "CDs & Vinyl,Folk",
+                                       "Rap" = "CDs & Vinyl,Rap",
+                                       "Broadway & Vocalists" = "CDs & Vinyl,Broadway & Vocalists",
+                                       "Holidays & Weddings" = "CDs & Vinyl,Holiday & Wedding",
+                                       "Gospel" = "CDs & Vinyl,Gospel",
+                                       "Latin" = "CDs & Vinyl,Latin Music"
                              ), 
                              selected="CDs & Vinyl,Pop"),
                  sliderInput("sizesliderreviewer", "Number of reviews to show (randomly sampled):",
                              min = 1, max = 74338,
-                             value = 37169),
+                             value = 74338),
                  radioButtons(
                      inputId = "clickorbrushreviewer",
                      label = "How to select data",
@@ -156,8 +166,10 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-
+    
+###########################################################
 ########################################################### clicks
+###########################################################    
     
     output$click_info <- renderPrint({
         # Because it's a ggplot2, we don't need to supply xvar or yvar; if this
@@ -234,14 +246,12 @@ server <- function(input, output, session) {
     
     ##
     
-    
     clicked_product <- reactive({
         if (input$clickorbrush == "Click"){
             data_category() %>% filter(asin %in% nearPoints(average_review_price(), input$plot1_click, addDist = TRUE)$asin)
         }
         else{
             data_category() %>% filter(asin %in% brushedPoints(average_review_price(), input$plot1_brush)$asin)
-            
         }
     })
     
@@ -251,7 +261,6 @@ server <- function(input, output, session) {
         }
         else{
             review_category() %>% filter(reviewerID %in% brushedPoints(average_review_reviewer_sampled(), input$reviewer1_brush)$reviewerID)
-            
         }
     })
     
@@ -274,11 +283,11 @@ server <- function(input, output, session) {
     ##
     
     observe({
-        updateSliderInput(session, "sizeslider", max=n_data(), value=n_data()/2) 
+        updateSliderInput(session, "sizeslider", max=n_data(), value=n_data()) 
     })
     
     observe({
-        updateSliderInput(session, "sizesliderreviewer", max=n_product(), value=n_product()/2)
+        updateSliderInput(session, "sizesliderreviewer", max=n_product(), value=n_product())
     })
     
     ##
@@ -287,7 +296,6 @@ server <- function(input, output, session) {
         max_price <- max(average_review_sampled()$price, na.rm=TRUE)
         updateSliderInput(session, "pricerange", max=max_price, value=c(0,max_price))
     })
-    
     
     ##
     
@@ -303,8 +311,9 @@ server <- function(input, output, session) {
         average_review_sampled() %>% filter(price >= input$pricerange[1] & price <= input$pricerange[2])
     })
 
-    
+###########################################################    
 ########################################################### plots
+###########################################################
     
     output$plot1 <- renderPlot({
         #my_breaks = c(0.1, 10, 100, 400, 800)
