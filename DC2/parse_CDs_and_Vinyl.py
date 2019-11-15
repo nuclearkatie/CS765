@@ -10,7 +10,8 @@ def main(args):
     df = pd.DataFrame(data)
     df_cleaned = clean_data(df)
 
-    feather.write_feather(df_cleaned, 'CDs_and_Vinyl')
+    # feather.write_feather(df_cleaned, 'CDs_and_Vinyl')
+    df_cleaned.to_csv('CDs_and_Vinyl.csv', index=False)
 
 
 def load_file(file):
