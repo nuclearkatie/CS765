@@ -17,10 +17,12 @@ library(viridis)
 
 #######################################################################################################################
 
-metadata = arrow::read_feather('CDs_and_Vinyl', as_data_frame = TRUE)
-cds <- read.csv(file="CDs_and_Vinyl_5.csv", header=TRUE, sep=",")
-leftJoinDf <- left_join(cds,metadata,by="asin")
-leftJoinDf <- leftJoinDf %>% mutate(time = as.POSIXct(as.numeric(as.character(unixReviewTime)),origin="1970-01-01",tz="GMT"))
+#metadata = arrow::read_feather('CDs_and_Vinyl', as_data_frame = TRUE)
+#cds <- read.csv(file="CDs_and_Vinyl_5.csv", header=TRUE, sep=",")
+#leftJoinDf <- left_join(cds,metadata,by="asin")
+#leftJoinDf <- leftJoinDf %>% mutate(time = as.POSIXct(as.numeric(as.character(unixReviewTime)),origin="1970-01-01",tz="GMT"))
+
+leftJoinDf <- read.csv(file="CDs_and_Vinyl_joined.csv", header=TRUE, sep=",")
 
 #######################################################################################################################
 # UI Definition
