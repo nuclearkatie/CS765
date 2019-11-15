@@ -1,0 +1,24 @@
+---
+title: "Minimize Data"
+output: html_notebook
+---
+
+This is a very quick band-aid file. I realized that loading the full data onto the online application was too much for the amount of memory I could load into shinyapps.io, so this file just throws away all the categories of data that aren't being used in the visualization in it's current form.
+
+```{r}
+metadata = read.csv(file="CDs_and_Vinyl.csv", header=TRUE, sep=",")
+
+cds <- read.csv(file="CDs_and_Vinyl_5.csv", header=TRUE, sep=",")
+leftJoinDf <- left_join(cds,metadata,by="asin")
+leftJoinDf <- leftJoinDf %>% mutate(time = as.POSIXct(as.numeric(as.character(unixReviewTime)),origin="1970-01-01",tz="GMT"))
+
+View(leftJoinDf)
+
+leftJoinDf <- leftJoinDf %>% filter(categoriesstring %in% c("CDs & Vinyl,Pop", 'CDs & Vinyl,Country', "CDs & Vinyl,Metal,Death Metal", "CDs & Vinyl,Metal","CDs & Vinyl,Children's Music","CDs & Vinyl,Classical","CDs & Vinyl,Christian","CDs & Vinyl,Blues","CDs & Vinyl,Jazz","CDs & Vinyl,Soundtracks","CDs & Vinyl,Children's Music,Disney","CDs & Vinyl,Dance & Electronic","CDs & Vinyl,R&B,Soul","CDs & Vinyl,Reggae","CDs & Vinyl,R&B",
+"CDs & Vinyl,New Age","CDs & Vinyl,Alternative Rock","CDs & Vinyl,Folk","CDs & Vinyl,Rap","CDs & Vinyl,Broadway & Vocalists","CDs & Vinyl,Holiday & Wedding","CDs & Vinyl,Gospel","CDs & Vinyl,Latin Music"))
+
+write.csv(leftJoinDf, "CDs_and_Vinyl_joined.csv")
+```
+
+
+
